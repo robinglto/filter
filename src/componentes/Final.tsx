@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import useSWR from "swr";
 import axios from "axios";
+import { useDebounce } from "use-debounce";
 
 type Data = {
   name: {
@@ -13,14 +14,19 @@ type Data = {
 };
 
 const fetcher = async (url: string) => {
-  const response = await axios.get(url);
-  return response.data;
+  try {
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {}
 };
 
 export default function Final() {
   const apiUrl = "https://restcountries.com/v3/all";
-  const { data, error } = useSWR<Data[]>(apiUrl, fetcher);
-  const [search, setSearch] = useState<string[]>([]);
+  const { data } = useSWR<Data[]>(apiUrl, fetcher);
+
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [debouncedSearch] = useDebounce(searchResults, 1000);
+
   const {
     register,
     handleSubmit,
@@ -30,34 +36,40 @@ export default function Final() {
   const handleSearch = (formData: { name: string }) => {
     const { name } = formData;
 
-    !data
-      ? setSearch([])
-      : setSearch(
-          data
-            .filter((country) =>
-              country.name.common.toLowerCase().includes(name.toLowerCase())
-            )
-            .map((country) => country.name.common)
-            .slice(0, 6)
-        );
+    if (!data || name.trim().length === 0) {
+      setSearchResults([""]);
+    } else {
+      setSearchResults(
+        data
+          .filter((country) =>
+            country.name.common.toLowerCase().includes(name.toLowerCase())
+          )
+          .map((country) => country.name.common)
+          .slice(0, 6)
+      );
+    }
   };
 
   return (
     <div>
-      <form onSubmit={handleSubmit(handleSearch)}>
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        onChange={handleSubmit(handleSearch)}
+      >
         <input
           type="text"
+          autoComplete="off"
           className="text-black"
-          placeholder="search"
+          placeholder="buscar"
           {...register("name", { required: true })}
         />
-        {errors.name && <div>This field is required</div>}
+        {errors.name && <div>Este campo es obligatorio</div>}
       </form>
-      {search.length > 0 &&
+      {searchResults.length > 0 &&
         errors.name === undefined &&
-        search.map((countryName) => (
-          <div key={countryName}>
-            <p>{countryName}</p>
+        debouncedSearch.map((nombrePais) => (
+          <div key={nombrePais}>
+            <p>{nombrePais}</p>
           </div>
         ))}
     </div>
