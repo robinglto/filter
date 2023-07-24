@@ -2,8 +2,11 @@
 
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import useSWR, { Fetcher } from "swr";
 
 export default function Search() {
+  // const { data } = useSWR<string[]>('/api/data', fetcher)
+
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const {
     register,
